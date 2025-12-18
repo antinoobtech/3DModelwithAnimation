@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GLB Step Viewer</title>
+    <style>
+      html,
+      body,
+      #root {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        width: 100%;
+        overflow: hidden;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+      }
+
+      .app-root {
+        width: 100vw;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        background: #0b0b10;
+        color: #f9fafb;
+      }
+
+      .app-header {
+        padding: 10px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #1f2933;
+        background: #050509;
+      }
+
+      .app-title {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 700;
+      }
+
+      .app-subtitle {
+        font-size: 12px;
+        opacity: 0.75;
+        margin-top: 2px;
+      }
+
+      .app-main {
+        flex: 1;
+        display: flex;
+        min-height: 0;
+      }
+
+      .canvas-wrapper {
+        flex: 1;
+        position: relative;
+      }
+
+      #canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+
+      .nav-buttons {
+        position: absolute;
+        bottom: 16px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 12px;
+        z-index: 10;
+      }
+
+      .btn-primary,
+      .btn-secondary {
+        padding: 8px 16px;
+        border-radius: 999px;
+        border: none;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        transition: transform 0.08s ease, box-shadow 0.08s ease,
+          background 0.08s ease;
+      }
+
+      .btn-primary {
+        background: #f97316;
+        color: #000;
+        box-shadow: 0 4px 12px rgba(249, 115, 22, 0.35);
+      }
+
+      .btn-primary:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 14px rgba(249, 115, 22, 0.45);
+      }
+
+      .btn-secondary {
+        background: #374151;
+        color: #e5e7eb;
+      }
+
+      .btn-secondary:hover {
+        background: #4b5563;
+        transform: translateY(-1px);
+      }
+
+      .side-panel {
+        width: 360px;
+        padding: 16px 18px;
+        border-left: 1px solid #1f2933;
+        background: radial-gradient(circle at top, #111827 0, #020617 55%);
+        box-sizing: border-box;
+        overflow: auto;
+      }
+
+      .side-panel h2 {
+        margin: 0 0 8px 0;
+        font-size: 14px;
+      }
+
+      .side-panel p {
+        font-size: 12px;
+        line-height: 1.5;
+        margin: 8px 0;
+      }
+
+      .side-panel code {
+        background: rgba(255, 255, 255, 0.08);
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-family: "Courier New", monospace;
+        font-size: 11px;
+      }
+
+      .panel-box {
+        margin-top: 10px;
+        padding: 10px 12px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 10px;
+        background: rgba(2, 6, 23, 0.5);
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      .step-card {
+        position: absolute;
+        top: 14px;
+        left: 14px;
+        max-width: 420px;
+        padding: 12px;
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(2, 6, 23, 0.55);
+        backdrop-filter: blur(10px);
+        z-index: 12;
+        transform: translateY(6px);
+        opacity: 0;
+        transition: opacity 520ms ease, transform 520ms ease;
+      }
+
+      .step-card-enter {
+        opacity: 1;
+        transform: translateY(0px);
+      }
+
+      .step-pill {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 800;
+        background: rgba(249, 115, 22, 0.85);
+        color: #050509;
+      }
+
+      .step-text {
+        margin-top: 8px;
+        font-size: 13px;
+        line-height: 1.45;
+        opacity: 0.92;
+      }
+
+      @media (max-width: 980px) {
+        .app-main {
+          flex-direction: column;
+        }
+        .side-panel {
+          width: 100%;
+          border-left: none;
+          border-top: 1px solid #1f2933;
+        }
+        .canvas-wrapper {
+          height: 62vh;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-root">
+      <header class="app-header">
+        <div>
+          <h1 class="app-title">GLB Step Viewer</h1>
+          <div class="app-subtitle">
+            Step: <span id="step-counter">1 / 4</span>
+            <span id="step-label"></span>
+            <span id="step-time"></span>
+          </div>
+        </div>
+      </header>
+
+      <div class="app-main">
+        <div class="canvas-wrapper">
+          <canvas id="canvas"></canvas>
+
+          <div class="nav-buttons">
+            <button class="btn-secondary" id="prev-btn">◀ Previous</button>
+            <button class="btn-primary" id="next-btn">Next ▶</button>
+          </div>
+
+          <div id="step-card" class="step-card step-card-enter">
+            <div class="step-pill" id="step-pill">Step</div>
+            <div class="step-text" id="step-desc"></div>
+          </div>
+        </div>
+
+        <aside class="side-panel">
+          <h2>Update steps</h2>
+          <p>Edit timestamps + camera XYZ + text directly in the HTML file.</p>
+
+          <div class="panel-box">
+            <div>
+              <strong>Current:</strong> <span id="current-label">-</span>
+            </div>
+            <div>
+              <strong>Start:</strong> <span id="current-start">-</span>s
+            </div>
+            <div><strong>End:</strong> <span id="current-end">-</span>s</div>
+          </div>
+
+          <div class="panel-box">
+            <div><strong>Cam Pos:</strong> <span id="cam-pos">-</span></div>
+            <div>
+              <strong>Cam Target:</strong> <span id="cam-target">-</span>
+            </div>
+            <div><strong>FOV:</strong> <span id="cam-fov">-</span></div>
+            <div><strong>Move:</strong> <span id="cam-move">0.6</span>s</div>
+          </div>
+        </aside>
+      </div>
+    </div>
+
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://esm.sh/three@r128",
+          "three/addons/": "https://esm.sh/three@r128/examples/jsm/"
+        }
+      }
+    </script>
+    <script type="module">
+      import * as THREE from "three";
+      import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+
+      console.log("Script starting...");
+      console.log("THREE loaded:", !!THREE);
+      console.log("GLTFLoader loaded:", !!GLTFLoader);
+
+      function initApp() {
+        console.log("initApp called!");
+        const ANIMATION_SEGMENTS = [
+          {
+            label: "Step 1",
+            description: "Introduce the product and set the scene.",
+            start: 0.0,
+            end: 2.5,
+            cam: {
+              position: [0, 10, 10],
+              target: [0, 0, 0],
+              fov: 100,
+              moveSeconds: 2.5,
+            },
+          },
+          {
+            label: "Step 2",
+            description: "Highlight the main feature with a closer angle.",
+            start: 2.5,
+            end: 10.0,
+            cam: {
+              position: [0, 10, 10],
+              target: [0, 10, 0],
+              fov: 90,
+              moveSeconds: 2.5,
+            },
+          },
+          {
+            label: "Step 3",
+            description: "Show the final detail and end pose.",
+            start: 10.0,
+            end: 17.5,
+            cam: {
+              position: [0, 5, 10],
+              target: [0, 5, 0],
+              fov: 50,
+              moveSeconds: 2.5,
+            },
+          },
+          {
+            label: "Step 4",
+            description: "Show the final detail and end pose.",
+            start: 17.5,
+            end: 30.0,
+            cam: {
+              position: [0, 5, 10],
+              target: [0, 5, 0],
+              fov: 50,
+              moveSeconds: 2.5,
+            },
+          },
+        ];
+
+        // ============ THREE.JS SETUP ============
+        const canvas = document.getElementById("canvas");
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0b0b10);
+
+        const camera = new THREE.PerspectiveCamera(
+          45,
+          window.innerWidth / window.innerHeight,
+          0.1,
+          1000
+        );
+        camera.position.set(0, 1.5, 5);
+
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.shadowMap.enabled = true;
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+        scene.add(ambientLight);
+
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+        directionalLight.position.set(5, 10, 5);
+        directionalLight.castShadow = true;
+        directionalLight.shadow.camera.left = -20;
+        directionalLight.shadow.camera.right = 20;
+        directionalLight.shadow.camera.top = 20;
+        directionalLight.shadow.camera.bottom = -20;
+        scene.add(directionalLight);
+
+        // Basic environment
+        const planeGeometry = new THREE.PlaneGeometry(50, 50);
+        const planeMaterial = new THREE.ShadowMaterial({ opacity: 0.3 });
+        const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+        plane.rotation.x = -Math.PI / 2;
+        plane.position.y = -5;
+        plane.receiveShadow = true;
+        scene.add(plane);
+
+        // ============ STATE ============
+        let segmentIndex = 0;
+        let gltf = null;
+        let mixer = null;
+        let action = null;
+        let clip = null;
+        let modelGroup = null;
+        let segEnd = 0;
+
+        // Camera tween state
+        const camTween = {
+          fromPos: new THREE.Vector3(),
+          toPos: new THREE.Vector3(),
+          fromTarget: new THREE.Vector3(),
+          toTarget: new THREE.Vector3(),
+          fromFov: 45,
+          toFov: 45,
+          t: 1,
+          duration: 0.6,
+        };
+
+        // ============ GLTF LOADER ============
+        const loader = new GLTFLoader();
+
+        function loadModel(url) {
+          console.log("Loading model from:", url);
+          loader.load(
+            url,
+            (loadedGltf) => {
+              console.log("Model loaded successfully!", loadedGltf);
+              gltf = loadedGltf;
+
+              // Remove old model
+              if (modelGroup) scene.remove(modelGroup);
+
+              modelGroup = gltf.scene;
+              scene.add(modelGroup);
+              console.log("Model added to scene");
+
+              // Setup animation
+              if (gltf.animations && gltf.animations.length > 0) {
+                mixer = new THREE.AnimationMixer(modelGroup);
+                clip = gltf.animations[0];
+                action = mixer.clipAction(clip);
+                action.setLoop(THREE.LoopOnce, 1);
+                action.clampWhenFinished = true;
+                action.timeScale = 1;
+                action.play();
+                action.paused = true;
+                console.log(
+                  "Loaded clip:",
+                  clip.name,
+                  "duration:",
+                  clip.duration
+                );
+              } else {
+                console.warn("No animations found in model");
+              }
+
+              // Center and scale model
+              const box = new THREE.Box3().setFromObject(modelGroup);
+              const size = new THREE.Vector3();
+              const center = new THREE.Vector3();
+              box.getSize(size);
+              box.getCenter(center);
+
+              console.log("Model bounds - Size:", size, "Center:", center);
+
+              modelGroup.position.sub(center);
+              const maxAxis = Math.max(size.x, size.y, size.z);
+              const desiredSize = 3;
+              if (maxAxis > 0) {
+                modelGroup.scale.setScalar(desiredSize / maxAxis);
+                console.log("Model scaled to:", desiredSize / maxAxis);
+              }
+
+              console.log("Model position:", modelGroup.position);
+              console.log("Model scale:", modelGroup.scale);
+
+              // Jump to first segment
+              updateSegment();
+            },
+            (progress) => {
+              console.log(
+                "Loading progress:",
+                Math.round((progress.loaded / progress.total) * 100) + "%"
+              );
+            },
+            (error) => {
+              console.error("Failed to load model:", error);
+            }
+          );
+        }
+
+        // ============ SEGMENT MANAGEMENT ============
+        function updateSegment() {
+          if (!action || !clip) return;
+
+          const segment = ANIMATION_SEGMENTS[segmentIndex];
+          const start = Math.max(0, Math.min(segment.start, clip.duration));
+          const end = Math.max(start, Math.min(segment.end, clip.duration));
+          segEnd = end;
+
+          action.paused = true;
+          action.play();
+          action.time = start;
+          mixer.update(0);
+          action.paused = false;
+
+          // Setup camera tween
+          camTween.fromPos.copy(camera.position);
+          camTween.fromTarget.set(0, 0, 0);
+          camTween.fromFov = camera.fov;
+
+          const { position, target, fov, moveSeconds } = segment.cam;
+          camTween.toPos.set(position[0], position[1], position[2]);
+          camTween.toTarget.set(target[0], target[1], target[2]);
+          camTween.toFov = fov;
+          camTween.duration = Math.max(0.05, moveSeconds);
+          camTween.t = 0;
+
+          updateUI();
+        }
+
+        function updateUI() {
+          const segment = ANIMATION_SEGMENTS[segmentIndex];
+
+          // Update header
+          document.getElementById("step-counter").textContent = `${
+            segmentIndex + 1
+          } / ${ANIMATION_SEGMENTS.length}`;
+          document.getElementById(
+            "step-label"
+          ).textContent = ` • ${segment.label}`;
+          document.getElementById(
+            "step-time"
+          ).textContent = ` • ${segment.start}s→${segment.end}s`;
+
+          // Update step card
+          document.getElementById("step-pill").textContent = segment.label;
+          document.getElementById("step-desc").textContent =
+            segment.description;
+          const stepCard = document.getElementById("step-card");
+          stepCard.classList.remove("step-card-enter");
+          setTimeout(() => stepCard.classList.add("step-card-enter"), 10);
+
+          // Update panel
+          document.getElementById("current-label").textContent = segment.label;
+          document.getElementById("current-start").textContent = segment.start;
+          document.getElementById("current-end").textContent = segment.end;
+          document.getElementById("cam-pos").textContent =
+            segment.cam.position.join(", ");
+          document.getElementById("cam-target").textContent =
+            segment.cam.target.join(", ");
+          document.getElementById("cam-fov").textContent = segment.cam.fov;
+          document.getElementById("cam-move").textContent =
+            segment.cam.moveSeconds;
+        }
+
+        // ============ EVENT LISTENERS ============
+        document.getElementById("next-btn").addEventListener("click", () => {
+          segmentIndex = (segmentIndex + 1) % ANIMATION_SEGMENTS.length;
+          updateSegment();
+        });
+
+        document.getElementById("prev-btn").addEventListener("click", () => {
+          segmentIndex =
+            (segmentIndex - 1 + ANIMATION_SEGMENTS.length) %
+            ANIMATION_SEGMENTS.length;
+          updateSegment();
+        });
+
+        // ============ ANIMATION LOOP ============
+        function animate(time) {
+          requestAnimationFrame(animate);
+
+          if (action && !action.paused) {
+            mixer.update(1 / 60);
+            if (action.time >= segEnd) {
+              action.time = segEnd;
+              action.paused = true;
+              mixer.update(0);
+            }
+          }
+
+          // Camera tween
+          if (camTween.t < 1) {
+            camTween.t = Math.min(1, camTween.t + 1 / 60 / camTween.duration);
+            const t = camTween.t;
+            const ease = t * t * (3 - 2 * t); // Smoothstep
+
+            const pos = camTween.fromPos.clone().lerp(camTween.toPos, ease);
+            const target = camTween.fromTarget
+              .clone()
+              .lerp(camTween.toTarget, ease);
+            const fov =
+              camTween.fromFov + (camTween.toFov - camTween.fromFov) * ease;
+
+            camera.position.copy(pos);
+            camera.fov = fov;
+            camera.updateProjectionMatrix();
+            camera.lookAt(target);
+          }
+
+          renderer.render(scene, camera);
+        }
+
+        // ============ HANDLE WINDOW RESIZE ============
+        window.addEventListener("resize", () => {
+          const width = window.innerWidth;
+          const height = window.innerHeight;
+          camera.aspect = width / height;
+          camera.updateProjectionMatrix();
+          renderer.setSize(width, height);
+        });
+
+        // ============ INITIALIZATION ============
+        loadModel("/model_latest.glb");
+        animate();
+      } // Close initApp function
+
+      initApp();
+    </script>
+  </body>
+</html>
