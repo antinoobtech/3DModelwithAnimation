@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef } from "react";
-import { useFrame, useThree } from "@react-three/fiber";
+import { ThreeEvent, useFrame, useThree } from "@react-three/fiber";
 import { useGLTF, useAnimations } from "@react-three/drei";
 import * as THREE from "three";
 import type { GLTF } from "three-stdlib";
@@ -181,13 +181,13 @@ const GlbSegmentViewer: React.FC<GlbSegmentViewerProps> = ({
     <primitive
       ref={group}
       object={scene}
-      onPointerDown={(e) => {
+      onPointerDown={(e: ThreeEvent<PointerEvent>) => {
         isDragging.current = true;
         lastX.current = e.clientX;
       }}
       onPointerUp={() => (isDragging.current = false)}
       onPointerLeave={() => (isDragging.current = false)}
-      onPointerMove={(e) => {
+      onPointerMove={(e: ThreeEvent<PointerEvent>) => {
         if (!isDragging.current) return;
         const dx = e.clientX - lastX.current;
         lastX.current = e.clientX;
