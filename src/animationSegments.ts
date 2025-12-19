@@ -22,7 +22,7 @@ export const ANIMATION_SEGMENTS: AnimationSegment[] = [
     cam: {
       position: [1, 10, 8],
       target: [0, 0, 0], // look straight down
-      fov: 10,
+      fov: 50,
       moveSeconds: 0.6,
     }
   },
