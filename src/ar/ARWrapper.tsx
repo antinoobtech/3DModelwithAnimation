@@ -53,7 +53,7 @@ function Placement({ onPlacedMatrixChange }: { onPlacedMatrixChange: (m: THREE.M
   }
 
   return (
-    <HitTest
+    <XRHitTest
       onHit={(matrix) => {
         lastMatrix.current = matrix.clone();
         if (!placed) onPlacedMatrixChange(matrix.clone());
